@@ -9,65 +9,35 @@ import java.awt.event.MouseEvent;
  * Title
  * Description
  */
-class GUIListSeat extends JPanel {
-	Kiosk kiosk;
-	Film film;
+class GUIListSeat extends JPanel implements ActionListener {
+	private int ticketType = Ticket.ADULT;
+	private Color currentColor = Ticket.ADULT_COLOR;
 
-	GUIListSeat(Kiosk kiosk, Film film, int i) {
+	GUIListSeat(Kiosk kiosk, Film film, String screening) {
 		super(new BorderLayout());
-		this.kiosk = kiosk;
 
-		Font buttonFont = kiosk.getButtonFont();
-
-		String screening = film.getScreenings().get(i);
 		String[] screen = screening.split("/");
-		JPanel seatAndMorePanel = new Screen(kiosk, Integer.parseInt(screen[0]));
 
-		JPanel listSeatSouthPanel = new JPanel();
-		listSeatSouthPanel.setLayout(new BoxLayout(listSeatSouthPanel, BoxLayout.X_AXIS));
-
-		JButton exitButton = new JButton("Exit");
-		exitButton.setFont(buttonFont);
-		exitButton.addActionListener(e -> System.exit(0));
-		listSeatSouthPanel.add(exitButton);
-		listSeatSouthPanel.add(Box.createHorizontalStrut(25));
-
-		JButton backButton = new JButton("Back");
-		backButton.setFont(kiosk.getButtonFont());
-		backButton.addActionListener(e -> kiosk.showListScreening());
-		listSeatSouthPanel.add(backButton);
-		listSeatSouthPanel.add(Box.createHorizontalGlue());
-
-		add(seatAndMorePanel, BorderLayout.CENTER);
-		add(listSeatSouthPanel, BorderLayout.SOUTH);
-	}
-}
-
-class Screen extends JPanel implements ActionListener {
-	private int screenNum;
-	private String movieName;
-	private int[][] seats;
-	private Color selectedColor = Ticket.ADULT_COLOR;
-
-	Screen(Kiosk kiosk, int screenNum) {
-		setLayout(new BorderLayout());
+		JPanel selectSeatPanel = new JPanel(new BorderLayout());
 
 		JPanel seatPanel = new JPanel();
 		JPanel rightPanel = new JPanel();
 		rightPanel.setLayout(new GridLayout(0, 1));
 
-		JLabel A = new JLabel("A", JLabel.CENTER);
-		A.setFont(kiosk.getButtonFont());
-		JLabel B = new JLabel("B", JLabel.CENTER);
-		B.setFont(kiosk.getButtonFont());
-		JLabel C = new JLabel("C", JLabel.CENTER);
-		C.setFont(kiosk.getButtonFont());
-		JLabel D = new JLabel("D", JLabel.CENTER);
-		D.setFont(kiosk.getButtonFont());
-		JLabel E = new JLabel("E", JLabel.CENTER);
-		E.setFont(kiosk.getButtonFont());
+		JLabel[] cols = new JLabel[5];
+		cols[0] = new JLabel("A", JLabel.CENTER);
+		cols[0].setFont(kiosk.getButtonFont());
+		cols[1] = new JLabel("B", JLabel.CENTER);
+		cols[1].setFont(kiosk.getButtonFont());
+		cols[2] = new JLabel("C", JLabel.CENTER);
+		cols[2].setFont(kiosk.getButtonFont());
+		cols[3] = new JLabel("D", JLabel.CENTER);
+		cols[3].setFont(kiosk.getButtonFont());
+		cols[4] = new JLabel("E", JLabel.CENTER);
+		cols[4].setFont(kiosk.getButtonFont());
 
-		switch (screenNum) {
+		int[][] seats = null;
+		switch (Integer.parseInt(screen[0])) {
 			case 1:
 				seats = new int[][]{{1, 1, 1, 1, 0, 1, 1, 1, 1},
 						{1, 1, 1, 1, 0, 1, 1, 1, 1},
@@ -89,43 +59,49 @@ class Screen extends JPanel implements ActionListener {
 						{1, 1, 0, 1, 1, 0, 1, 1},
 						{1, 1, 0, 1, 1, 0, 1, 1}};
 				seatPanel.setLayout(new GridLayout(seats.length, seats[0].length));
-				rightPanel.add(E);
 				break;
 		}
-		rightPanel.add(D);
-		rightPanel.add(C);
-		rightPanel.add(B);
-		rightPanel.add(A);
 
+		int col = seats.length;
 		for (int[] seat : seats) {
-			int j = seat.length;
 			int num = 0;
 			for (int aSeat : seat) {
-				if (aSeat == 1)
+				if (aSeat == 1) {
 					num++;
+				}
 			}
 			for (int aSeat : seat) {
 				if (aSeat == 1) {
-					JButton seatButton = new JButton("" + num);
+					Seat seatButton = new Seat("" + num, film, screening);
 					seatButton.setFont(kiosk.getButtonFont());
-					seatButton.addMouseListener(new mouseAdapter());
+					seatButton.setSeat(cols[col - 1].getText() + num);
+
+					if (KioskController.checkSold(seatButton))
+						seatButton.setEnabled(false);
+					else
+						seatButton.addMouseListener(new mouseAdapter());
+
 					seatPanel.add(seatButton);
 					num--;
 				} else {
 					seatPanel.add(new JLabel());
 				}
 			}
+			rightPanel.add(cols[col - 1]);
+			col--;
 		}
 
 		JPanel seatAndNumber = new JPanel(new BorderLayout());
-		seatAndNumber.add(seatPanel, BorderLayout.CENTER);
-		seatAndNumber.add(rightPanel, BorderLayout.EAST);
 
 		JPanel screenLabelPanel = new JPanel();
 		JLabel screenLabel = new JLabel("Screen");
 		screenLabel.setFont(kiosk.getButtonFont());
 		screenLabelPanel.setBackground(Color.CYAN);
 		screenLabelPanel.add(screenLabel);
+
+		seatAndNumber.add(seatPanel, BorderLayout.CENTER);
+		seatAndNumber.add(rightPanel, BorderLayout.EAST);
+		seatAndNumber.add(screenLabelPanel, BorderLayout.SOUTH);
 
 		//Radio buttons. To select a ticket type.
 		JRadioButton adult = new JRadioButton("Adult");
@@ -169,50 +145,69 @@ class Screen extends JPanel implements ActionListener {
 		radioPanel.add(senior);
 		radioPanel.add(student);
 
-		add(radioPanel, BorderLayout.WEST);
-		add(seatAndNumber, BorderLayout.CENTER);
-		add(screenLabelPanel, BorderLayout.SOUTH);
-	}
+		selectSeatPanel.add(radioPanel, BorderLayout.WEST);
+		selectSeatPanel.add(seatAndNumber, BorderLayout.CENTER);
 
-	int getScreenNum() {
-		return screenNum;
-	}
+		JPanel listSeatSouthPanel = new JPanel();
+		listSeatSouthPanel.setLayout(new BoxLayout(listSeatSouthPanel, BoxLayout.X_AXIS));
 
-	String getMovieName() {
-		return movieName;
-	}
+		JButton exitButton = new JButton("Exit");
+		exitButton.setFont(kiosk.getButtonFont());
+		exitButton.addActionListener(e -> System.exit(0));
 
-	int[][] getSeats() {
-		return seats;
+		JButton backButton = new JButton("Back");
+		backButton.setFont(kiosk.getButtonFont());
+		backButton.addActionListener(e -> kiosk.showListScreening());
+
+		JButton confirmButton = new JButton("Confirm");
+		confirmButton.setFont(kiosk.getButtonFont());
+		confirmButton.addActionListener(e -> kiosk.confirmTicket());
+
+		listSeatSouthPanel.add(exitButton);
+		listSeatSouthPanel.add(Box.createHorizontalStrut(25));
+		listSeatSouthPanel.add(backButton);
+		listSeatSouthPanel.add(Box.createHorizontalGlue());
+		listSeatSouthPanel.add(confirmButton);
+
+		add(selectSeatPanel, BorderLayout.CENTER);
+		add(listSeatSouthPanel, BorderLayout.SOUTH);
 	}
 
 	@Override
 	public void actionPerformed(ActionEvent e) {
 		switch (e.getActionCommand()) {
 			case "Adult":
-				selectedColor = Ticket.ADULT_COLOR;
+				ticketType = Ticket.ADULT;
+				currentColor = Ticket.ADULT_COLOR;
 				break;
 			case "Child":
-				selectedColor = Ticket.CHILD_COLOR;
+				ticketType = Ticket.CHILD;
+				currentColor = Ticket.CHILD_COLOR;
 				break;
 			case "Senior":
-				selectedColor = Ticket.SENIOR_COLOR;
+				ticketType = Ticket.SENIOR;
+				currentColor = Ticket.SENIOR_COLOR;
 				break;
 			case "Student":
-				selectedColor = Ticket.STUDENT_COLOR;
+				ticketType = Ticket.STUDENT;
+				currentColor = Ticket.STUDENT_COLOR;
 				break;
 		}
 	}
 
 	class mouseAdapter extends MouseAdapter {
-		mouseAdapter() {
-			super();
-		}
-
 		@Override
 		public void mouseClicked(MouseEvent e) {
-			((JButton) e.getSource()).setForeground(selectedColor);
-			((JButton) e.getSource()).setBackground(selectedColor);
+			Seat seatButton = (Seat) e.getSource();
+			if (seatButton.isSelected()) {
+				seatButton.setForeground(currentColor);
+				seatButton.setTicketType(ticketType);
+				System.out.println(seatButton.getSeat());
+				KioskController.selectedSeats.add(seatButton);
+			} else {
+				seatButton.setForeground(Color.BLACK);
+				KioskController.selectedSeats.removeIf(seat1 -> seat1.getSeat().equals(seatButton.getSeat()));
+			}
 		}
 	}
 }

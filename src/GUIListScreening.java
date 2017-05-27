@@ -1,7 +1,5 @@
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -12,14 +10,8 @@ import java.util.Date;
  * Description  This class list all screenings of one movie.
  */
 class GUIListScreening extends JPanel {
-	private Kiosk kiosk;
-	private Film film;
-
 	GUIListScreening(Kiosk kiosk, Film film) {
 		super(new BorderLayout());
-		this.kiosk = kiosk;
-		this.film = film;
-		Font buttonFont = kiosk.getButtonFont();
 
 		JPanel listScreeningPanel = new JPanel();
 		listScreeningPanel.setLayout(new BoxLayout(listScreeningPanel, BoxLayout.Y_AXIS));
@@ -32,7 +24,7 @@ class GUIListScreening extends JPanel {
 			screenLabelPanel[i] = new JPanel();
 			screenLabelPanel[i].setBackground(Color.CYAN);
 			screenLabel[i] = new JLabel("Screen " + (i + 1));
-			screenLabel[i].setFont(buttonFont);
+			screenLabel[i].setFont(kiosk.getButtonFont());
 			screenLabel[i].setAlignmentX(screenLabelPanel[i].getAlignmentX());
 			screenLabelPanel[i].add(screenLabel[i]);
 			screen[i].add(screenLabelPanel[i], BorderLayout.NORTH);
@@ -41,30 +33,35 @@ class GUIListScreening extends JPanel {
 			listScreeningPanel.add(screen[i]);
 		}
 		ArrayList<String> screenings = film.getScreenings();
-		int amount = screenings.size();
-		JButton[] numButton = new JButton[amount];
-		for (int i = 0; i < amount; i++) {
-			String[] time = screenings.get(i).split("/");
+		for (String screening : screenings) {
+			String[] time = screening.split("/");
 			SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd-HH-mm");
 			Date date = new Date();
 			try {
 				date = simpleDateFormat.parse(time[1]);
 			} catch (ParseException e) {
-				System.out.println("screening information wrong!" + screenings.get(i));
+				System.out.println("screening information wrong!" + screening);
 			}
+			Date now = new Date();
+			if (!(now.getYear() == date.getYear() && now.getMonth() == date.getMonth() && now.getDay() == date.getDay()))
+				continue;
+
 			SimpleDateFormat ft = new SimpleDateFormat("HH:mm");
-			numButton[i] = new JButton(ft.format(date));
-			numButton[i].setFont(buttonFont);
-			numButton[i].addMouseListener(new mouseAdapter(i));
+			JButton screeningButton = new JButton(ft.format(date));
+			screeningButton.setFont(kiosk.getButtonFont());
+			if (now.after(date))
+				screeningButton.setEnabled(false);
+			else
+				screeningButton.addActionListener(e -> kiosk.listSeat(film, screening));
 			switch (time[0]) {
 				case "1":
-					screenButtonPanel[0].add(numButton[i]);
+					screenButtonPanel[0].add(screeningButton);
 					break;
 				case "2":
-					screenButtonPanel[1].add(numButton[i]);
+					screenButtonPanel[1].add(screeningButton);
 					break;
 				case "3":
-					screenButtonPanel[2].add(numButton[i]);
+					screenButtonPanel[2].add(screeningButton);
 					break;
 			}
 		}
@@ -73,10 +70,11 @@ class GUIListScreening extends JPanel {
 		listScreeningSouthPanel.setLayout(new BoxLayout(listScreeningSouthPanel, BoxLayout.X_AXIS));
 
 		JButton exitButton = new JButton("Exit");
-		exitButton.setFont(buttonFont);
+		exitButton.setFont(kiosk.getButtonFont());
 		exitButton.addActionListener(e -> System.exit(0));
+
 		JButton backButton = new JButton("Back");
-		backButton.setFont(buttonFont);
+		backButton.setFont(kiosk.getButtonFont());
 		backButton.addActionListener(e -> kiosk.showListFilm());
 
 		listScreeningSouthPanel.add(exitButton);
@@ -86,21 +84,9 @@ class GUIListScreening extends JPanel {
 
 		ImageIcon image = film.getImage();
 		image.setImage(image.getImage().getScaledInstance(330, 470, Image.SCALE_DEFAULT));
+
 		add(new JLabel(image), BorderLayout.WEST);
 		add(listScreeningPanel, BorderLayout.CENTER);
 		add(listScreeningSouthPanel, BorderLayout.SOUTH);
-	}
-
-	class mouseAdapter extends MouseAdapter {
-		int i;
-
-		mouseAdapter(int i) {
-			this.i = i;
-		}
-
-		@Override
-		public void mouseClicked(MouseEvent e) {
-			kiosk.listSeat(film, i);
-		}
 	}
 }

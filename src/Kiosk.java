@@ -17,10 +17,9 @@ import java.util.ArrayList;
 
 /**
  * Title        Kiosk.java
- * Description  This class contains the kiosk interface's definition.
+ * Description  This class controls the UI.
  */
 class Kiosk {
-	private Cinema cinema;
 	private CardLayout kioskCardLayout;
 	private JPanel kioskPanel;
 	private Font buttonFont;
@@ -30,7 +29,7 @@ class Kiosk {
 	 * This function creates a JFrame to contain a JPanel which uses CardLayout to display all things.
 	 */
 	private Kiosk() {
-		cinema = new Cinema(getFilmFromFile());
+		KioskController.films = getFilmFromFile();
 		try {
 			UIManager.setLookAndFeel("com.sun.java.swing.plaf.windows.WindowsLookAndFeel");
 		} catch (ClassNotFoundException | InstantiationException | UnsupportedLookAndFeelException | IllegalAccessException e) {
@@ -46,7 +45,7 @@ class Kiosk {
 
 		kioskCardLayout = new CardLayout();
 		kioskPanel = new JPanel(kioskCardLayout);
-		kioskFrame.add(kioskPanel);
+		kioskFrame.setContentPane(kioskPanel);
 
 		kioskFrame.setVisible(true);
 	}
@@ -65,7 +64,20 @@ class Kiosk {
 	 */
 	private void welcome() {
 		kioskPanel.add(new GUIWelcome(this), "GUIWelcome");
+		showWelcome();
+	}
+
+	void showWelcome() {
 		kioskCardLayout.show(kioskPanel, "GUIWelcome");
+	}
+
+	void manage() {
+		kioskPanel.add(new GUIManage(this), "GUIManage");
+		showManage();
+	}
+
+	void showManage() {
+		kioskCardLayout.show(kioskPanel, "GUIManage");
 	}
 
 	/**
@@ -84,7 +96,7 @@ class Kiosk {
 	}
 
 	void listScreening(int i) {
-		kioskPanel.add(new GUIListScreening(this, cinema.getFilm(i)), "GUIListScreenings");
+		kioskPanel.add(new GUIListScreening(this, KioskController.getFilm(i)), "GUIListScreenings");
 		showListScreening();
 	}
 
@@ -92,13 +104,25 @@ class Kiosk {
 		kioskCardLayout.show(kioskPanel, "GUIListScreenings");
 	}
 
-	void listSeat(Film film, int i) {
-		kioskPanel.add(new GUIListSeat(this, film, i), "GUIListSeat");
+	void listSeat(Film film, String screening) {
+		kioskPanel.add(new GUIListSeat(this, film, screening), "GUIListSeat");
+		KioskController.selectedSeats = new ArrayList<>(); //Clear all selected seats.
 		showListSeat();
 	}
 
 	void showListSeat() {
 		kioskCardLayout.show(kioskPanel, "GUIListSeat");
+	}
+
+	void confirmTicket() {
+		KioskController.orderTickets = new ArrayList<>();
+		KioskController.addOrderTicket();
+		kioskPanel.add(new GUIConfirmTicket(this), "GUIConfirmTicket");
+		showConfirmTicket();
+	}
+
+	void showConfirmTicket() {
+		kioskCardLayout.show(kioskPanel, "GUIConfirmTicket");
 	}
 
 	/**
@@ -187,8 +211,8 @@ class Kiosk {
 			Transformer transformer = transformerFactory.newTransformer();
 			DOMSource source = new DOMSource(doc);
 			StreamResult result = new StreamResult(new File("films.xml"));
-			transformer.setOutputProperty(OutputKeys.INDENT, "yes");//增加换行缩进，但此时缩进默认为0
-			transformer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "4");//设置缩进为4
+			transformer.setOutputProperty(OutputKeys.INDENT, "yes");
+			transformer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "4");
 			transformer.transform(source, result);
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -196,7 +220,7 @@ class Kiosk {
 	}
 
 	ArrayList<Film> getFilms() {
-		return cinema.getFilms();
+		return KioskController.getFilms();
 	}
 
 	Font getButtonFont() {
